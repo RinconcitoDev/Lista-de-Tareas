@@ -1,128 +1,103 @@
-const CACHE_NAME = 'todo-list-pwa-cache-v1';
+// service-worker.js
+
+const CACHE_NAME = 'pwa-task-manager-v1';
 const urlsToCache = [
-  './',               
-  'index.html',    
-  'styles.css',    
-  'script.js',    
-  'manifest.json',       
-  './icon-192x192.png',
-  './icon-512x512.png'
+    './',
+    'index.html',
+    'styles.css',
+    'script.js',
+    'manifest.json',
+    './icon-192x192.png',
+    './icon-512x512.png'
 ];
 
-// **VARIABLE GLOBAL PARA CACHE DE TAREAS EN EL SERVICE WORKER**
-let tareasCache = []; // Inicializada vacía, se actualizará con mensajes del cliente
-
 self.addEventListener('install', event => {
-    console.log('Service Worker instalado');
+    console.log('Service Worker instalado'); // CONSOLE LOG EN INSTALL
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('Cache abierta');
+                console.log('Cache abierta'); // CONSOLE LOG AL ABRIR CACHÉ
                 return cache.addAll(urlsToCache);
+            })
+            .catch(error => {
+                console.error('Error al añadir URLs a la caché en install:', error); // CONSOLE LOG DE ERROR EN INSTALL
             })
     );
 });
 
 self.addEventListener('activate', event => {
-    console.log('Service Worker activado');
+    console.log('Service Worker activado'); // CONSOLE LOG EN ACTIVATE
+    const cacheWhitelist = [CACHE_NAME];
+
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                        console.log('Service Worker: Borrando caché antigua:', cacheName); // CONSOLE LOG AL BORRAR CACHÉ ANTIGUA
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+    );
 });
 
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request);
+                return response || fetch(event.request);
             })
     );
 });
 
-// **FUNCION PARA MOSTRAR NOTIFICACIONES**
-function mostrarNotificacion(titulo, cuerpo) {
-    console.log('Service Worker: Función mostrarNotificacion() llamada:', titulo, cuerpo); // Mensaje de depuración
-    self.registration.showNotification(titulo, {
-        body: cuerpo,
-        icon: './icon-512x512.png', // MODIFICADO: Ruta relativa './'
-        vibrate: [200, 100, 200],
-        badge: './icon-192x192.png' // MODIFICADO: Ruta relativa './'
-        // Puedes configurar más opciones aquí: https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration/showNotification
-    });
-}
 
-// **FUNCION PARA OBTENER TAREAS DEL CACHE DEL SERVICE WORKER** - **MODIFICADO: AHORA USA LA VARIABLE GLOBAL 'tareasCache'**
-function getTasksFromCache() {
-    console.log('Service Worker: getTasksFromCache() - Devolviendo tareas desde cache interna del SW.'); // Mensaje de depuración
-    return Promise.resolve(tareasCache); // Devolver la variable global 'tareasCache' como promesa
-}
-
-
-// **FUNCION PARA VERIFICAR TAREAS VENCIDAS Y MOSTRAR NOTIFICACIONES** - **MODIFICADO: AHORA USA 'getTasksFromCache()'**
-function verificarTareasVencidas() {
-    console.log('Service Worker: Verificando tareas vencidas...'); // Mensaje de depuración
-    // **¡IMPORTANTE!** Ahora usamos 'getTasksFromCache()' para obtener las tareas desde la cache del SW
-    getTasksFromCache().then(tareas => {
-        if (tareas && tareas.length > 0) {
-            tareas.forEach(tarea => {
-                console.log(`Service Worker: Verificando tarea "${tarea.text}", vencimiento: ${tarea.dueDate}, ahora: ${new Date()}`); // Log por cada tarea verificada
-                if (tarea.dueDate) {
-                    const fechaVencimiento = new Date(tarea.dueDate);
-                    const ahora = new Date();
-
-                    if (fechaVencimiento <= ahora && !tarea.completed) {
-                        // **TAREA VENCIDA Y NO COMPLETADA - MOSTRAR NOTIFICACION**
-                        console.log(`Service Worker: ¡Tarea "${tarea.text}" VENCIDA! - Mostrando notificación`); // Log ANTES de mostrar notificación
-                        mostrarNotificacion('¡Tarea Vencida!', `La tarea "${tarea.text}" ha vencido.`);
-                        // **OPCIONAL:** Aquí podrías añadir lógica para marcar la tarea como "notificación enviada"
-                        // para no repetir la notificación cada minuto si la tarea sigue vencida
-                    }
-                }
-            });
-        } else {
-            console.log('Service Worker: No hay tareas en cache del SW para verificar.'); // Log si no hay tareas en cache
-        }
-    });
-}
-
-// **EJEMPLO: VERIFICAR TAREAS VENCIDAS CADA MINUTO (AJUSTAR INTERVALO SEGÚN NECESIDADES - BATERIA)**
-setInterval(verificarTareasVencidas, 60 * 1000); // Cada 60 segundos (1 minuto)
-
-// **EVENT LISTENER PARA MENSAJES DESDE EL CLIENTE (PWA)** - **MODIFICADO: AHORA GUARDA LAS TAREAS EN 'tareasCache'**
 self.addEventListener('message', event => {
-    if (event.data && event.data.type === 'tasks-updated') { // **NUEVO TIPO DE MENSAJE: 'tasks-updated'**
-        console.log('Service Worker: Recibido mensaje "tasks-updated" del cliente.'); // Mensaje de depuración
-        tareasCache = event.data.tasks; // **GUARDAR LAS TAREAS RECIBIDAS EN LA VARIABLE GLOBAL 'tareasCache'**
-        console.log('Service Worker: Tareas actualizadas desde el cliente y guardadas en cache interna del SW: ', tareasCache); // Mensaje de depuración (mostrar tareas en cache)
-    } else if (event.data && event.data.type === 'getTasks') {
-        // **EL CLIENTE (PWA) SOLICITA LAS TAREAS - RESPONDER ENVIANDO LOS DATOS (YA NO ES TAN NECESARIO)**
-        // **EN ESTE EJEMPLO, YA NO NECESITAMOS OBTENER LAS TAREAS DESDE localStorage DIRECTAMENTE EN EL SW**
-        // **AHORA EL SW USA LA VARIABLE GLOBAL 'tareasCache' QUE SE ACTUALIZA CON MENSAJES DEL CLIENTE**
-        // **PERO DEJAMOS ESTE BLOQUE 'getTasks' POR SI EN EL FUTURO QUIERES USARLO PARA ALGO**
-        console.warn('Service Worker: Mensaje "getTasks" RECIBIDO del cliente, pero YA NO ES NECESARIO en este ejemplo.'); // Warning - ya no es necesario
-        const tareasJSON = localStorage.getItem('tasks'); // **INTENTO DE ACCEDER A localStorage DIRECTAMENTE (PUEDE NO FUNCIONAR EN SW)**
-        const tareas = tareasJSON ? JSON.parse(tareasJSON) : [];
-        event.ports[0].postMessage({ type: 'tasks', tasks: tareas }); // **ENVIAR TAREAS AL CLIENTE (RESPUESTA)**
-    }  else if (event.data && event.data.type === 'update-badge') {
-        // **RECIBE MENSAJE PARA ACTUALIZAR EL BADGE (CONTADOR)**
-        const badgeCount = event.data.badgeCount;
-        if ('setAppBadge' in navigator) {
-            if (badgeCount > 0) {
-                navigator.setAppBadge(badgeCount).then(() => {
-                    console.log('Service Worker: Badge de la app actualizado a:', badgeCount);
-                }).catch(error => {
-                    console.error('Service Worker: Error al actualizar el badge de la app:', error);
-                });
-            } else {
-                navigator.clearAppBadge().then(() => {
-                    console.log('Service Worker: Badge de la app limpiado.');
-                }).catch(error => {
-                    console.error('Service Worker: Error al limpiar el badge de la app:', error);
-                });
-            }
-        } else {
-            console.warn('Service Worker: API de badges de app no soportada en este navegador.');
-        }
+    console.log('Service Worker Recibió mensaje:', event.data); // CONSOLE LOG AL RECIBIR MENSAJE
+
+    if (event.data.type === 'check-due-dates') {
+        console.log('Service Worker: Mensaje recibido para verificar fechas límite.'); // CONSOLE LOG ESPECÍFICO
+        checkDueDatesAndNotify(event); // Llama a la función para verificar fechas y notificar
+    } else if (event.data.type === 'tasks-updated') {
+        console.log('Service Worker: Mensaje recibido de actualización de tareas.'); // CONSOLE LOG ESPECÍFICO
+        // ... (puedes añadir lógica adicional si es necesario al actualizar tareas) ...
+    } else if (event.data.type === 'update-badge') {
+        console.log('Service Worker: Mensaje recibido para actualizar badge.'); // CONSOLE LOG ESPECÍFICO
+        // ... (puedes añadir lógica adicional para badge si es necesario) ...
     }
 });
+
+
+function checkDueDatesAndNotify(event) {
+    console.log('Service Worker: checkDueDatesAndNotify INICIO'); // CONSOLE LOG AL INICIO DE LA FUNCIÓN
+    const tasks = event.data.tasks || []; // Obtén las tareas del mensaje o usa un array vacío por defecto
+    console.log('Service Worker: Tareas recibidas en checkDueDatesAndNotify:', tasks); // CONSOLE LOG DE LAS TAREAS RECIBIDAS
+
+    tasks.forEach(task => {
+        if (task.dueDate && !task.completed) {
+            const dueDate = new Date(task.dueDate);
+            const now = new Date();
+            if (dueDate <= now) {
+                console.log('Service Worker: Tarea VENCIDA detectada:', task.text); // CONSOLE LOG DE TAREA VENCIDA DETECTADA
+                showNotification(`¡Tarea vencida!`, `La tarea "${task.text}" ha vencido.`);
+            }
+        }
+    });
+    console.log('Service Worker: checkDueDatesAndNotify FIN'); // CONSOLE LOG AL FINAL DE LA FUNCIÓN
+}
+
+
+function showNotification(title, body) {
+    console.log('Service Worker: showNotification INICIO', title, body); // CONSOLE LOG AL INICIO DE showNotification
+    self.registration.showNotification(title, {
+        body: body,
+        icon: './icon-512x512.png',
+        badge: './icon-192x192.png'
+    }).then(() => {
+        console.log('Service Worker: Notificación mostrada con éxito:', title); // CONSOLE LOG SI LA NOTIFICACIÓN SE MUESTRA BIEN
+    }).catch(error => {
+        console.error('Service Worker: Error al mostrar la notificación:', error); // CONSOLE LOG DE ERROR AL MOSTRAR NOTIFICACIÓN
+    });
+    console.log('Service Worker: showNotification FIN'); // CONSOLE LOG AL FINAL DE showNotification
+}
