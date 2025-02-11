@@ -1,0 +1,116 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  background-color: rgb(110, 81, 110);
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  width: 90%;
+  max-width: 500px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.input-area {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.input-area input[type="text"] {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-right: 10px;
+}
+
+.input-area input[type="datetime-local"] {
+  color: #444;
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-right: 10px;
+}
+
+.input-area button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  background-color: #3cc47c;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.input-area button:hover {
+  background-color: #2980b9;
+}
+
+#taskList {
+  list-style-type: none;
+  padding: 0;
+}
+
+#taskList li {
+  background-color: #ecf0f1;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#taskList li.completed {
+  text-decoration: line-through;
+  color: #777;
+  background-color: #d4d4d4;
+}
+
+#taskList li span {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+#taskList li button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: #e74c3c;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#taskList li button:hover {
+  background-color: #c0392b;
+}
+
+#taskList li .dueDate { /* Estilos para el SPAN de fecha dentro de cada LI */
+  font-size: 0.9em; /* Tamaño de fuente más pequeño */
+  color: #777;      /* Color grisáceo */
+  margin-left: 15px; /* Margen izquierdo para separarlo del texto de la tarea */
+  font-style: italic; /* Estilo itálica (opcional) */
+}
+
+.input-area input[type="date"] { /* Estilos para el INPUT de tipo DATE */
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-left: 10px; /* Margen izquierdo para separarlo del input de texto */
+  width: auto;       /* Ancho automático para adaptarse al contenido */
+}
