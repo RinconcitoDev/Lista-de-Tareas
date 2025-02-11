@@ -1,12 +1,12 @@
 const CACHE_NAME = 'todo-list-pwa-cache-v1';
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/script.js',
-    '/manifest.json',
-    './icon-192x192.png', // MODIFICADO: Rutas relativas './'
-    './icon-512x512.png'  // MODIFICADO: Rutas relativas './'
+  './',               
+  'index.html',    
+  'styles.css',    
+  'script.js',    
+  'manifest.json',       
+  './icon-192x192.png',
+  './icon-512x512.png'
 ];
 
 // **VARIABLE GLOBAL PARA CACHE DE TAREAS EN EL SERVICE WORKER**
