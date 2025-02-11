@@ -1,9 +1,8 @@
 var tasks;
 console.log("script.js: INICIO DE EJECUCION - VERSIÓN ACTUALIZADA VERIFICADA");
 
-
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("DOM completamente cargado y analizado");
+    console.log("script.js: DOM completamente cargado y analizado");
 
     // **1. DECLARACIONES DE VARIABLES DEL DOM:**
     const taskInput = document.getElementById('taskInput');
@@ -11,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const taskList = document.getElementById('taskList');
     const dueDateInput = document.getElementById('dueDateInput');
 
-    console.log("Tareas cargadas desde localStorage (ANTES de getTasksFromStorage):", tasks); // Log ANTES de cargar tareas
+    console.log("script.js: Tareas cargadas desde localStorage (ANTES de getTasksFromStorage):", tasks); // Log ANTES de cargar tareas
 
     // **2. DEFINICIONES DE FUNCIONES (en este orden):**
     function formatDate(dateTimeString) {
@@ -85,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderTasks();
     }
 
-    function renderTasks() { // **DEFINICIÓN DE renderTasks - IMPORTANTE: DEFINIRLA AQUÍ**
+    function renderTasks() {
         taskList.innerHTML = "";
         tasks.forEach((task, index) => {
             const taskItem = document.createElement('li');
@@ -131,9 +130,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: 'tasks-updated',
                 tasks: tasks
             });
-            console.log('script.js: Tareas enviadas al Service Worker después de guardar (desde saveTasks).'); // MODIFICADO LOG
+            console.log('script.js: Tareas enviadas al Service Worker después de guardar (desde saveTasks).');
         } else {
-            console.warn('script.js: Service Worker no activo o no disponible para enviar tareas (desde saveTasks).'); // MODIFICADO LOG
+            console.warn('script.js: Service Worker no activo o no disponible para enviar tareas (desde saveTasks).');
         }
     }
 
@@ -148,6 +147,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function checkDueDates() {
+        console.log('script.js: checkDueDates: INICIO');
+
+        if (!tasks) {
+            console.error("checkDueDates: ERROR CRÍTICO: ¡tasks es UNDEFINED!  La carga de tareas desde localStorage falló o aún no se ha completado correctamente.  Las notificaciones NO funcionarán.  Revisa la función getTasksFromStorage() y la carga de datos.");
+            return;
+        }
+
+        if (!Array.isArray(tasks)) {
+            console.warn("checkDueDates: tasks NO es un array (pero NO es undefined, algo inesperado). Inicializando como array vacío por seguridad, pero puede haber un problema. Revisa la lógica de carga de tareas.");
+            tasks = [];
+            console.log('script.js: checkDueDates: tasks inicializado como array vacío (por seguridad, aunque algo inesperado)');
+            return;
+        }
+
         tasks.forEach((task, index) => {
             if (task.dueDate && !task.completed) {
                 const dueDate = new Date(task.dueDate);
@@ -157,29 +170,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        console.log('script.js: checkDueDates: FIN');
     }
 
     function getTasksFromStorage() {
-      const storedTasks = localStorage.getItem('tasks');
-      console.log("getTasksFromStorage: ANTES de asignar valor a 'tasks', tasks =", tasks);
-      tasks = storedTasks ? JSON.parse(storedTasks) : [];
-      renderTasks(); // Ahora OK porque renderTasks se define ANTES de llamar a getTasksFromStorage dentro de DOMContentLoaded
-      updateBadge();
-  
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({
-              type: 'tasks-updated',
-              tasks: tasks
-          });
-          console.log('script.js: Tareas enviadas al Service Worker después de cargar desde localStorage.');
-      } else {
-          console.warn('script.js: Service Worker no activo o no disponible para enviar tareas.');
-      }
-      return tasks;
-  }
+        console.log('script.js: getTasksFromStorage: INICIO');
+        const storedTasks = localStorage.getItem('tasks');
+        console.log("script.js: getTasksFromStorage: ANTES de asignar valor a 'tasks', tasks =", tasks);
+        tasks = storedTasks ? JSON.parse(storedTasks) : [];
+        renderTasks();
+        updateBadge();
 
-    console.log("Tareas cargadas desde localStorage (DESPUÉS de getTasksFromStorage):", tasks); // Log DESPUÉS de cargar tareas
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'tasks-updated',
+                tasks: tasks
+            });
+            console.log('script.js: Tareas enviadas al Service Worker después de cargar desde localStorage.');
+        } else {
+            console.warn('script.js: Service Worker no activo o no disponible para enviar tareas.');
+        }
+        console.log('script.js: getTasksFromStorage: FIN');
+        return Promise.resolve(tasks);
+    }
 
+
+    console.log("script.js: Tareas cargadas desde localStorage (DESPUÉS de getTasksFromStorage):", tasks); // Log DESPUÉS de cargar tareas - ESTE LOG AHORA PROBABLEMENTE SEA ANTES DE CARGAR REALMENTE LAS TAREAS PORQUE getTasksFromStorage SE LLAMA ASINCRONAMENTE
 
     // **4. EVENT LISTENERS Y CÓDIGO ADICIONAL DE DOMContentLoaded:**
     addButton.addEventListener('click', saveTask);
@@ -205,17 +221,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./service-worker.js')
             .then(registration => {
-                console.log('ServiceWorker registrado con éxito: ', registration);
-                getTasksFromStorage(); 
+                console.log('script.js: ServiceWorker registrado con éxito: ', registration);
+                getTasksFromStorage()
+                    .then(loadedTasks => {
+                        console.log('script.js: getTasksFromStorage() promesa RESUELTA. Tareas cargadas:', loadedTasks);
+                        checkDueDates();
+                    })
+                    .catch(error => {
+                        console.error('script.js: Error en la promesa getTasksFromStorage():', error);
+                    });
             })
             .catch(registrationError => {
-                console.log('Error al registrar el ServiceWorker: ', registrationError);
+                console.log('script.js: Error al registrar el ServiceWorker: ', registrationError);
             });
     }
 
     // INICIAR TEMPORIZADOR PARA REVISAR FECHAS LÍMITE CADA MINUTO
     setInterval(checkDueDates, 60000);
-    checkDueDates();
+    // checkDueDates(); // <-- **NO LLAMAR a checkDueDates() DIRECTAMENTE AQUÍ - AHORA SE LLAMA DESDE EL .then() ANIDADO DESPUÉS DE CARGAR LAS TAREAS**
     updateBadge();
 
 
