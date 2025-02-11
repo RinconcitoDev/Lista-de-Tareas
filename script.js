@@ -178,8 +178,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return tasks;
   }
 
-    // **3. LLAMADA A getTasksFromStorage *DESPUÉS* de DEFINIR TODAS LAS FUNCIONES:**
-    getTasksFromStorage(); // **LÍNEA CLAVE:  LLAMAR AQUÍ, DESPUÉS DE DEFINIR LAS FUNCIONES**
     console.log("Tareas cargadas desde localStorage (DESPUÉS de getTasksFromStorage):", tasks); // Log DESPUÉS de cargar tareas
 
 
@@ -208,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         navigator.serviceWorker.register('./service-worker.js')
             .then(registration => {
                 console.log('ServiceWorker registrado con éxito: ', registration);
+                getTasksFromStorage(); 
             })
             .catch(registrationError => {
                 console.log('Error al registrar el ServiceWorker: ', registrationError);
